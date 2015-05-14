@@ -88,8 +88,8 @@ class BaseRenderer(Ch):
 
 class DepthRenderer(BaseRenderer):
     terms = 'f', 'frustum', 'background_image','overdraw'
-    dterms = 'camera', 'v'        
-    
+    dterms = 'camera', 'v'
+
 
     @property
     def shape(self):
@@ -98,12 +98,12 @@ class DepthRenderer(BaseRenderer):
     def compute_r(self):
         tmp = self.camera.r
         return self.depth_image.reshape((self.frustum['height'], self.frustum['width']))
-        
+
     def compute_dr_wrt(self, wrt):
-        
+
         if wrt is not self.camera and wrt is not self.v:
             return None
-        
+
         visibility = self.visibility_image
         visible = np.nonzero(visibility.ravel() != 4294967295)[0]
         barycentric = self.barycentric_image
@@ -150,7 +150,7 @@ class DepthRenderer(BaseRenderer):
             result2 = sp.csc_matrix((data, (IS, JS)), shape=(self.frustum['height']*self.frustum['width'], self.v.r.size))
             return result2
 
-    
+
     def on_changed(self, which):
 
         if 'frustum' in which:
@@ -160,15 +160,15 @@ class DepthRenderer(BaseRenderer):
             self.glf.Viewport(0, 0, w, h)
             self.glb = OsContext(w, h, typ=GL_UNSIGNED_BYTE)
             self.glb.Viewport(0, 0, w, h)
-            
-            
+
+
         if 'frustum' in which or 'camera' in which:
             setup_camera(self.glb, self.camera, self.frustum)
             setup_camera(self.glf, self.camera, self.frustum)
 
         if not hasattr(self, 'overdraw'):
             self.overdraw = True
-            
+
         assert(self.v is self.camera.v)
 
 
@@ -208,14 +208,14 @@ class DepthRenderer(BaseRenderer):
         w = self.frustum['width']
         h = self.frustum['height']
         idxs = np.arange(w*h).reshape((h, w))
-    
+
         # v0 is upperleft, v1 is upper right, v2 is lowerleft, v3 is lowerright
         v0 = col(idxs[:-1,:-1])
         v1 = col(idxs[:-1,1:])
         v2 = col(idxs[1:,:-1])
         v3 = col(idxs[1:,1:])
 
-        f = np.hstack((v0, v1, v2, v1, v3, v2)).reshape((-1,3))        
+        f = np.hstack((v0, v1, v2, v1, v3, v2)).reshape((-1,3))
         return v, f
 
 
@@ -231,19 +231,19 @@ class BoundaryRenderer(BaseRenderer):
     def compute_r(self):
         tmp = self.camera.r
         return self.color_image
-    
+
     def compute_dr_wrt(self, wrt):
         if wrt is not self.camera:
             return None
-        
+
         visibility = self.boundaryid_image
-        shape = visibility.shape        
-        
+        shape = visibility.shape
+
         visible = np.nonzero(visibility.ravel() != 4294967295)[0]
         num_visible = len(visible)
 
         barycentric = self.barycentric_image
-    
+
         return common.dImage_wrt_2dVerts(self.color_image, visible, visibility, barycentric, self.frustum['width'], self.frustum['height'], self.v.r.size/3, self.vpe)
 
     def on_changed(self, which):
@@ -254,14 +254,14 @@ class BoundaryRenderer(BaseRenderer):
             self.glf.Viewport(0, 0, w, h)
             self.glb = OsContext(w, h, typ=GL_UNSIGNED_BYTE)
             self.glb.Viewport(0, 0, w, h)
-            
+
         if 'frustum' in which or 'camera' in which:
             setup_camera(self.glb, self.camera, self.frustum)
             setup_camera(self.glf, self.camera, self.frustum)
-            
+
         if not hasattr(self, 'overdraw'):
             self.overdraw = True
-            
+
     @depends_on(terms+dterms)
     def color_image(self):
         self._call_on_changed()
@@ -271,7 +271,7 @@ class BoundaryRenderer(BaseRenderer):
 
 class ColoredRenderer(BaseRenderer):
     terms = 'f', 'frustum', 'background_image', 'overdraw', 'num_channels'
-    dterms = 'vc', 'camera', 'bgcolor'        
+    dterms = 'vc', 'camera', 'bgcolor'
 
     @property
     def shape(self):
@@ -285,16 +285,16 @@ class ColoredRenderer(BaseRenderer):
     def compute_r(self):
         tmp = self.camera.r
         return self.color_image # .reshape((self.frustum['height'], self.frustum['width'], -1)).squeeze()
-        
+
     def compute_dr_wrt(self, wrt):
         if wrt is not self.camera and wrt is not self.vc and wrt is not self.bgcolor:
             return None
-        
+
         visibility = self.visibility_image
 
         shape = visibility.shape
         color = self.color_image
-        
+
         visible = np.nonzero(visibility.ravel() != 4294967295)[0]
         num_visible = len(visible)
 
@@ -321,11 +321,11 @@ class ColoredRenderer(BaseRenderer):
             self.glf.Viewport(0, 0, w, h)
             self.glb = OsContext(w, h, typ=GL_UNSIGNED_BYTE)
             self.glb.Viewport(0, 0, w, h)
-            
+
         if 'frustum' in which or 'camera' in which:
             setup_camera(self.glb, self.camera, self.frustum)
             setup_camera(self.glf, self.camera, self.frustum)
-            
+
         if not hasattr(self, 'num_channels'):
             self.num_channels = 3
 
@@ -335,7 +335,7 @@ class ColoredRenderer(BaseRenderer):
 
         if not hasattr(self, 'overdraw'):
             self.overdraw = True
-            
+
         if 'bgcolor' in which or ('frustum' in which and hasattr(self, 'bgcolor')):
             self.glf.ClearColor(self.bgcolor.r[0], self.bgcolor.r[1%self.num_channels], self.bgcolor.r[2%self.num_channels], 1.)
 
@@ -348,7 +348,7 @@ class ColoredRenderer(BaseRenderer):
         vim = self.visibility_image+1
         arr = np.zeros(len(self.f)+1)
         arr[which_triangles+1] = 1
-        
+
         relevant_pixels = arr[vim.ravel()]
         cim2 = cim.copy() * np.atleast_3d(relevant_pixels.reshape(vim.shape))
         relevant_pixels = np.nonzero(arr[vim.ravel()])[0]
@@ -409,8 +409,8 @@ class ColoredRenderer(BaseRenderer):
         self._call_on_changed()
         return draw_boundary_images(self.glb, self.v.r, self.f, self.vpe, self.fpe, self.camera)
 
-    @depends_on(terms+dterms)    
-    def boundarycolor_image(self): 
+    @depends_on(terms+dterms)
+    def boundarycolor_image(self):
         self._call_on_changed()
         try:
             gl = self.glf
@@ -420,9 +420,9 @@ class ColoredRenderer(BaseRenderer):
             return np.asarray(deepcopy(gl.getImage()), np.float64)
         except:
             import pdb; pdb.set_trace()
-            
 
-        
+
+
 class TexturedRenderer(ColoredRenderer):
     terms = 'f', 'frustum', 'vt', 'ft', 'background_image', 'overdraw'
     dterms = 'vc', 'camera', 'bgcolor', 'texture_image'
@@ -437,7 +437,7 @@ class TexturedRenderer(ColoredRenderer):
     @property
     def num_channels(self):
         return 3
-        
+
     def release_textures(self):
         if hasattr(self, 'textureID'):
             arr = np.asarray(np.array([self.textureID]), np.uint32)
@@ -446,7 +446,7 @@ class TexturedRenderer(ColoredRenderer):
 
     def compute_dr_wrt(self, wrt):
         result = super(TexturedRenderer, self).compute_dr_wrt(wrt)
-        
+
         if wrt is self.vc:
             cim = self.draw_color_image(with_vertex_colors=False).ravel()
             cim = sp.spdiags(row(cim), [0], cim.size, cim.size)
@@ -473,7 +473,7 @@ class TexturedRenderer(ColoredRenderer):
 
             return sp.csc_matrix((data, (IS, JS)), shape=(self.r.size, wrt.r.size))
 
-            
+
         return result
 
     def on_changed(self, which):
@@ -484,7 +484,7 @@ class TexturedRenderer(ColoredRenderer):
             gl = self.glf
             texture_data = np.array(self.texture_image*255., dtype='uint8', order='C')
             tmp = np.zeros(2, dtype=np.uint32)
-            
+
             self.release_textures()
             gl.GenTextures(1, tmp) # TODO: free after done
             self.textureID = tmp[0]
@@ -502,7 +502,7 @@ class TexturedRenderer(ColoredRenderer):
         data = np.asarray(self.vt[ftidxs].astype(np.float32)[:,0:2], np.float32, order='C')
         data[:,1] = 1.0 - 1.0*data[:,1]
         return data
-    
+
     # Depends on 'f' because vpe/fpe depend on f
     @depends_on('vt', 'ft', 'f')
     def wireframe_tex_coords(self):
@@ -511,7 +511,7 @@ class TexturedRenderer(ColoredRenderer):
         edata = np.zeros((self.vpe.size,2), dtype=np.float32, order='C')
         edata = vvt[self.vpe.ravel()]
         return edata
-    
+
     def texture_mapping_on(self, gl, with_vertex_colors):
         gl.Enable(GL_TEXTURE_2D)
         gl.TexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR)
@@ -523,7 +523,7 @@ class TexturedRenderer(ColoredRenderer):
     def texture_mapping_off(self, gl):
         gl.Disable(GL_TEXTURE_2D)
         gl.DisableClientState(GL_TEXTURE_COORD_ARRAY)
-    
+
 
     # TODO: can this not be inherited from base? turning off texture mapping in that instead?
     @depends_on(dterms+terms)
@@ -535,8 +535,8 @@ class TexturedRenderer(ColoredRenderer):
         return result
 
 
-    @depends_on(terms+dterms)    
-    def boundarycolor_image(self): 
+    @depends_on(terms+dterms)
+    def boundarycolor_image(self):
         self._call_on_changed()
         try:
             gl = self.glf
@@ -619,15 +619,15 @@ def draw_edge_visibility(gl, v, e, f, hidden_wireframe=True):
     ec[:, 1] = (ec[:, 1] >> 8 ) & 255
     ec[:, 2] = (ec[:, 2] >> 16 ) & 255
     ec = np.asarray(ec, dtype=np.uint8)
-    
+
     draw_colored_primitives(gl, v, e, ec)
-    
+
     if hidden_wireframe:
         gl.Enable(GL_POLYGON_OFFSET_FILL)
         gl.PolygonOffset(10.0, 1.0)
         draw_colored_primitives(gl, v, f, fc=np.zeros(f.shape))
         gl.Disable(GL_POLYGON_OFFSET_FILL)
-    
+
     raw = np.asarray(gl.getImage(), np.uint32)
     raw = raw[:,:,0] + raw[:,:,1]*256 + raw[:,:,2]*256*256 - 1
     return raw
@@ -682,7 +682,7 @@ def draw_boundaryid_image(gl, v, f, vpe, fpe, camera):
     if False:
         visibility = draw_edge_visibility(gl, v, vpe, f, hidden_wireframe=True)
         return visibility
-        
+
     if True:
     #try:
         gl.Clear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -715,8 +715,8 @@ def setup_camera(gl, camera, frustum):
                   frustum['near'], frustum['far'],
                   camera.view_matrix,
                   camera.k.r)
-    
-    
+
+
 
 vs_source = """
 #version 120
@@ -802,7 +802,7 @@ def _setup_camera(gl, cx, cy, fx, fy, w, h, near, far, view_matrix, k):
     k = np.asarray(k)
     gl.MatrixMode(GL_PROJECTION)
     gl.LoadIdentity();
-    
+
     f = 0.5 * (fx + fy)
     right  =  (w-(cx+pixel_center_offset)) * (near/f)
     left   =           -(cx+pixel_center_offset)  * (near/f)
